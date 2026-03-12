@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rastreador de Visitas · Claro R2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #DA291C;
+    --red-dark: #a51e13;
+    --red-light: #fff0ef;
+    --dark: #111318;
+    --mid: #2a2d35;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f8f9fb;
+    --white: #ffffff;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--dark);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    height: 64px;
+    border-bottom: 3px solid var(--red);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--white);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--red); }
+  .header-sub {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-left: auto;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem;
+  }
+
+  /* ── UPLOAD SECTION ── */
+  .upload-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .upload-card {
+    background: var(--white);
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .upload-card:hover { border-color: var(--red); background: var(--red-light); }
+  .upload-card.loaded { border-color: var(--green); border-style: solid; background: var(--green-light); }
+  .upload-card input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .upload-card h3 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .upload-card p { font-size: 0.8rem; color: var(--muted); }
+  .upload-card .file-name { font-size: 0.85rem; color: var(--green); font-weight: 500; margin-top: 0.5rem; }
+
+  /* ── CONTROLS ── */
+  .controls {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    border: 1px solid var(--border);
+  }
+  .control-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .control-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  select, .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--dark);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 220px;
+  }
+  select:focus { border-color: var(--red); }
+  .btn {
+    background: var(--red);
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 0.65rem 1.5rem;
+    min-width: unset;
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .stat-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .stat-card .value { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; }
+  .stat-card.cumple .value { color: var(--green); }
+  .stat-card.nocumple .value { color: var(--red); }
+  .stat-card.pct .value { color: var(--dark); }
+
+  /* Progress bar */
+  .progress-wrap { margin-top: 0.5rem; background: #e5e7eb; border-radius: 99px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 99px; background: var(--green); transition: width 0.6s ease; }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--white);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .table-header h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; }
+  .filter-btns { display: flex; gap: 0.5rem; }
+  .filter-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 99px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .filter-btn.active { border-color: var(--red); color: var(--red); background: var(--red-light); }
+  .filter-btn.green.active { border-color: var(--green); color: var(--green); background: var(--green-light); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  thead th {
+    background: var(--dark);
+    color: white;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  tbody td { padding: 0.75rem 1rem; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .badge.cumple { background: var(--green-light); color: var(--green); }
+  .badge.nocumple { background: var(--red-light); color: var(--red); }
+
+  .visits-count {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* ── EMPTY / LOADING ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+  }
+  .empty-state .big { font-size: 3rem; margin-bottom: 1rem; }
+  .empty-state p { font-size: 0.9rem; max-width: 300px; margin: 0 auto; line-height: 1.6; }
+
+  /* ── PERSONA HEADER ── */
+  .persona-header {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 100%);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    border: 1px solid #333;
+  }
+  .persona-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+  }
+  .persona-info h2 { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; color: white; }
+  .persona-info p { font-size: 0.82rem; color: #9ca3af; margin-top: 0.2rem; }
+
+  @media (max-width: 768px) {
+    .upload-section { grid-template-columns: 1fr; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .controls { flex-direction: column; align-items: stretch; }
+    select { min-width: unset; width: 100%; }
+  }
+
+  .loading { display: none; text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
+  .loading.show { display: block; }
+
+  .day-cell { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+  .zona-cell { font-family: 'DM Mono', monospace; font-size: 0.8rem; background: var(--bg); padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>CLARO</span> · Rastreador R2</div>
+  <div class="header-sub">Verificación de Visitas Planeadas</div>
+</header>
+
+<main>
+
+  <!-- UPLOAD -->
+  <div class="upload-section">
+    <div class="upload-card" id="card-planeador">
+      <input type="file" id="file-planeador" accept=".xlsx,.xls">
+      <div class="upload-icon">📋</div>
+      <h3>Planeador R2</h3>
+      <p>Archivo Excel con las visitas planeadas (.xlsx)</p>
+      <div class="file-name" id="name-planeador"></div>
+    </div>
+    <div class="upload-card" id="card-visitas">
+      <input type="file" id="file-visitas" accept=".csv,.xlsx">
+      <div class="upload-icon">📍</div>
+      <h3>Reporte de Visitas (R_VIS)</h3>
+      <p>CSV con las visitas efectivamente realizadas</p>
+      <div class="file-name" id="name-visitas"></div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="control-group">
+      <label>Seleccionar persona</label>
+      <select id="sel-persona" disabled>
+        <option value="">— Primero sube los archivos —</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Período (mes)</label>
+      <select id="sel-mes" disabled>
+        <option value="">Detectando...</option>
+      </select>
+    </div>
+    <button class="btn" id="btn-analizar" disabled onclick="analizarPersona()">
+      Analizar →
+    </button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" style="display:none">
+
+    <div class="persona-header" id="persona-header">
+      <div class="persona-avatar" id="avatar"></div>
+      <div class="persona-info">
+        <h2 id="persona-nombre"></h2>
+        <p id="persona-meta"></p>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="label">Visitas Planeadas</div>
+        <div class="value" id="stat-total">0</div>
+      </div>
+      <div class="stat-card cumple">
+        <div class="label">✅ Cumplió</div>
+        <div class="value" id="stat-cumple">0</div>
+      </div>
+      <div class="stat-card nocumple">
+        <div class="label">❌ No cumplió</div>
+        <div class="value" id="stat-nocumple">0</div>
+      </div>
+      <div class="stat-card pct">
+        <div class="label">% Cumplimiento</div>
+        <div class="value" id="stat-pct">0%</div>
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2 id="table-title">Detalle de Visitas</h2>
+        <div class="filter-btns">
+          <button class="filter-btn active" onclick="filtrarTabla('all', this)">Todas</button>
+          <button class="filter-btn green" onclick="filtrarTabla('cumple', this)">Solo Cumple</button>
+          <button class="filter-btn" onclick="filtrarTabla('nocumple', this)">No Cumple</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Día</th>
+            <th>Zona / Ruta</th>
+            <th>Actividad</th>
+            <th>Visitas registradas</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="empty-state" id="empty-state">
+    <div class="big">📂</div>
+    <p>Sube el Planeador R2 y el reporte de visitas para comenzar</p>
+  </div>
+
+</main>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let planData = null;   // { cedula, nombre, rows: [{zona, actividad, dia}] } per sheet
+let visitData = null;  // Map: "CEDULA|ZONA|DIA" -> count
+let allRows = [];
+
+// ─── FILE HANDLERS ───────────────────────────────────────────────────────────
+document.getElementById('file-planeador').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('name-planeador').textContent = '⏳ Procesando...';
+  await parsePlaneador(file);
+  document.getElementById('name-planeador').textContent = '✓ ' + file.name;
+  document.getElementById('card-planeador').classList.add('loaded');
+  tryEnableControls();
+});
+
+document.getElementById('file-visitas').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('name-visitas').textContent = '⏳ Procesando...';
+  await parseVisitas(file);
+  document.getElementById('name-visitas').textContent = '✓ ' + file.name;
+  document.getElementById('card-visitas').classList.add('loaded');
+  tryEnableControls();
+});
+
+// ─── PARSE PLANEADOR ─────────────────────────────────────────────────────────
+async function parsePlaneador(file) {
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, { type: 'array', cellStyles: true });
+  planData = {};
+
+  const GREEN_RGB = ['FF92D050', 'FF8ED965'];
+  const GREEN_THEME = [9]; // theme index 9 = green
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+
+    // Get nombre (F6) and cedula (F7)
+    const nombreCell = ws['F6'];
+    const cedulaCell = ws['F7'];
+    if (!nombreCell || !cedulaCell) continue;
+
+    const nombre = String(nombreCell.v || '').trim();
+    const cedula = String(Math.round(Number(cedulaCell.v)) || '').trim();
+
+    // Get date row (row 17) - columns G onward
+    const dateMap = {};
+    for (let col = 7; col <= 50; col++) {
+      const addr = XLSX.utils.encode_cell({ r: 16, c: col - 1 }); // row 17 = index 16
+      const cell = ws[addr];
+      if (cell && cell.v !== undefined && cell.v !== null) {
+        try { dateMap[col] = Math.round(Number(cell.v)); } catch {}
+      }
+    }
+
+    // Scan data rows (row 18+)
+    const rows = [];
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+
+    for (let r = 17; r <= range.e.r; r++) { // row 18 = index 17
+      // Get zona (col E=5) and actividad (col F=6)
+      const zonaCell = ws[XLSX.utils.encode_cell({ r, c: 4 })];
+      const actCell  = ws[XLSX.utils.encode_cell({ r, c: 5 })];
+      if (!zonaCell) continue;
+      const zona = String(zonaCell.v || '').trim();
+      const actividad = actCell ? String(actCell.v || '').trim() : '';
+
+      // Check date columns for X with green fill
+      for (let col = 7; col <= 50; col++) {
+        const addr = XLSX.utils.encode_cell({ r, c: col - 1 });
+        const cell = ws[addr];
+        if (!cell || String(cell.v).toUpperCase() !== 'X') continue;
+
+        const day = dateMap[col];
+        if (!day || !zona) continue;
+
+        // Check if green
+        let isGreen = false;
+        const s = cell.s;
+        if (s && s.fgColor) {
+          const fc = s.fgColor;
+          if (fc.rgb && GREEN_RGB.includes(fc.rgb.toUpperCase())) isGreen = true;
+          if (fc.theme !== undefined && GREEN_THEME.includes(fc.theme)) isGreen = true;
+        }
+
+        if (isGreen) {
+          rows.push({ zona: zona.toUpperCase(), actividad, dia: day });
+        }
+      }
+    }
+
+    if (rows.length > 0) {
+      planData[sheetName] = { nombre, cedula, rows };
+    }
+  }
+}
+
+// ─── PARSE VISITAS CSV ────────────────────────────────────────────────────────
+async function parseVisitas(file) {
+  visitData = new Map();
+  const text = await file.text();
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return;
+
+  // Detect separator
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].replace(/^\uFEFF/, '').split(sep).map(h => h.trim().replace(/^"|"$/g, ''));
+
+  const colFecha   = headers.indexOf('FECHA');
+  const colRuta    = headers.indexOf('RUTA');    // zone code
+  const colUsuario = headers.indexOf('USUARIO'); // person name
+  const colCedula  = headers.indexOf('CEDULA');
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(sep).map(p => p.trim().replace(/^"|"$/g, ''));
+    if (parts.length < 5) continue;
+
+    const fechaStr = parts[colFecha] || '';
+    const dateMatch = fechaStr.match(/(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) continue;
+    const dia = parseInt(dateMatch[1].split('-')[2]);
+
+    const zona = (parts[colRuta] || '').toUpperCase().trim();
+    const cedula = (parts[colCedula] || '').trim();
+    if (!zona || !cedula) continue;
+
+    const key = `${cedula}|${zona}|${dia}`;
+    visitData.set(key, (visitData.get(key) || 0) + 1);
+  }
+}
+
+// ─── ENABLE CONTROLS ─────────────────────────────────────────────────────────
+function tryEnableControls() {
+  if (!planData || !visitData) return;
+
+  const sel = document.getElementById('sel-persona');
+  sel.innerHTML = '<option value="">— Selecciona una persona —</option>';
+
+  for (const [sheet, info] of Object.entries(planData)) {
+    const opt = document.createElement('option');
+    opt.value = sheet;
+    opt.textContent = info.nombre + ' (CC ' + info.cedula + ')';
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  document.getElementById('sel-mes').disabled = false;
+  document.getElementById('sel-mes').innerHTML = '<option value="3">Marzo 2026</option>';
+  document.getElementById('btn-analizar').disabled = false;
+}
+
+// ─── ANALYZE ─────────────────────────────────────────────────────────────────
+function analizarPersona() {
+  const sheet = document.getElementById('sel-persona').value;
+  if (!sheet || !planData[sheet]) return;
+
+  const persona = planData[sheet];
+  allRows = persona.rows.map(row => {
+    const key = `${persona.cedula}|${row.zona}|${row.dia}`;
+    const count = visitData.get(key) || 0;
+    return { ...row, visitas: count, cumple: count > 0 };
+  }).sort((a, b) => a.dia - b.dia);
+
+  const total = allRows.length;
+  const cumple = allRows.filter(r => r.cumple).length;
+  const noCumple = total - cumple;
+  const pct = total > 0 ? Math.round(cumple / total * 100) : 0;
+
+  // Update persona header
+  const initials = persona.nombre.split(' ').slice(0, 2).map(w => w[0]).join('');
+  document.getElementById('avatar').textContent = initials;
+  document.getElementById('persona-nombre').textContent = persona.nombre;
+  document.getElementById('persona-meta').textContent = `CC ${persona.cedula} · ${total} visitas planeadas · Marzo 2026`;
+
+  // Stats
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-cumple').textContent = cumple;
+  document.getElementById('stat-nocumple').textContent = noCumple;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-bar').style.background = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+
+  document.getElementById('table-title').textContent = `Detalle · ${persona.nombre}`;
+
+  renderTabla(allRows);
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+
+  // Reset filter buttons
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active');
+}
+
+// ─── RENDER TABLE ─────────────────────────────────────────────────────────────
+function renderTabla(rows) {
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '';
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">Sin datos para mostrar</td></tr>';
+    return;
+  }
+
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    const badgeClass = row.cumple ? 'cumple' : 'nocumple';
+    const badgeText  = row.cumple ? '✅ Cumplió' : '❌ No cumplió';
+    const countStyle = row.cumple ? 'color:var(--green)' : 'color:var(--red)';
+
+    tr.innerHTML = `
+      <td><span class="day-cell">${row.dia}</span></td>
+      <td><span class="zona-cell">${row.zona}</span></td>
+      <td style="color:var(--muted);font-size:0.82rem">${row.actividad || '—'}</td>
+      <td><span class="visits-count" style="${countStyle}">${row.visitas}</span></td>
+      <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// ─── FILTER TABLE ─────────────────────────────────────────────────────────────
+function filtrarTabla(tipo, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  let filtered = allRows;
+  if (tipo === 'cumple')   filtered = allRows.filter(r => r.cumple);
+  if (tipo === 'nocumple') filtered = allRows.filter(r => !r.cumple);
+  renderTabla(filtered);
+}
+</script>
+</body>
+</html>
