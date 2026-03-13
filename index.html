@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastreador de Visitas · Claro R2</title>
+
+  <!-- Fuentes -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Librería Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>CLARO</span> · Rastreador R2</div>
+  <div class="header-sub">Verificación de Visitas Planeadas</div>
+</header>
+
+<main>
+
+  <!-- SUBIR ARCHIVOS -->
+  <div class="upload-section">
+    <div class="upload-card" id="card-planeador">
+      <input type="file" id="file-planeador" accept=".xlsx,.xls">
+      <div class="upload-icon">📋</div>
+      <h3>Planeador R2</h3>
+      <p>Archivo Excel con las visitas planeadas (.xlsx)</p>
+      <div class="file-name" id="name-planeador"></div>
+    </div>
+    <div class="upload-card" id="card-visitas">
+      <input type="file" id="file-visitas" accept=".csv,.xlsx">
+      <div class="upload-icon">📍</div>
+      <h3>Reporte de Visitas (R_VIS)</h3>
+      <p>CSV con las visitas efectivamente realizadas</p>
+      <div class="file-name" id="name-visitas"></div>
+    </div>
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="controls">
+    <div class="control-group">
+      <label>Seleccionar persona</label>
+      <select id="sel-persona" disabled>
+        <option value="">— Primero sube los archivos —</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Período (mes)</label>
+      <select id="sel-mes" disabled>
+        <option value="">Detectando...</option>
+      </select>
+    </div>
+    <button class="btn" id="btn-analizar" disabled onclick="analizarPersona()">
+      Analizar →
+    </button>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="results" style="display:none">
+
+    <div class="persona-header" id="persona-header">
+      <div class="persona-avatar" id="avatar"></div>
+      <div class="persona-info">
+        <h2 id="persona-nombre"></h2>
+        <p id="persona-meta"></p>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="label">Visitas Planeadas</div>
+        <div class="value" id="stat-total">0</div>
+      </div>
+      <div class="stat-card cumple">
+        <div class="label">✅ Cumplió</div>
+        <div class="value" id="stat-cumple">0</div>
+      </div>
+      <div class="stat-card nocumple">
+        <div class="label">❌ No cumplió</div>
+        <div class="value" id="stat-nocumple">0</div>
+      </div>
+      <div class="stat-card pct">
+        <div class="label">% Cumplimiento</div>
+        <div class="value" id="stat-pct">0%</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2 id="table-title">Detalle de Visitas</h2>
+        <div class="filter-btns">
+          <button class="filter-btn active" onclick="filtrarTabla('all', this)">Todas</button>
+          <button class="filter-btn green"  onclick="filtrarTabla('cumple', this)">Solo Cumple</button>
+          <button class="filter-btn"        onclick="filtrarTabla('nocumple', this)">No Cumple</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Día</th>
+            <th>Zona / Ruta</th>
+            <th>Actividad</th>
+            <th>Visitas registradas</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ESTADO VACÍO -->
+  <div class="empty-state" id="empty-state">
+    <div class="big">📂</div>
+    <p>Sube el Planeador R2 y el reporte de visitas para comenzar</p>
+  </div>
+
+</main>
+
+<!-- Lógica -->
+<script src="js/app.js"></script>
+
+</body>
+</html>
